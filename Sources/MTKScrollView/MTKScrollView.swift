@@ -215,10 +215,7 @@ open class MTKScrollView: MTKView {
             self.shouldZoomAroundPoint = CGRect(
                 origin: self.contentOffset - CGPoint(x: self.contentSize.width / 2, y: self.contentSize.height / 2),
                 size: self.contentSize
-            ).contains(point) && (
-                self.contentSize.width * self.zoomScale > self.bounds.width ||
-                self.contentSize.height * self.zoomScale > self.bounds.height
-            )
+            ).contains(point)
         }
         
         self.unclampedZoomScale *= amount

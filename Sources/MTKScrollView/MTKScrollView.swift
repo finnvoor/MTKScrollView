@@ -118,8 +118,8 @@ open class MTKScrollView: MTKView {
     public func zoomToFit(animated: Bool = true) {
         self.zoomAnimation = nil
         let optimalZoomScale = min(
-            (self.frame.width - self.overscroll.width) / self.contentSize.width,
-            (self.frame.height - self.overscroll.height) / self.contentSize.height
+            self.frame.width / self.contentSize.width,
+            self.frame.height / self.contentSize.height
         )
         let currentZoomScale = self.zoomScale
         if animated, let animation = DisplayLinkAnimation(duration: 0.2, animationHandler: { (progress, _) in

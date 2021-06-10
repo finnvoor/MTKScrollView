@@ -126,9 +126,11 @@ open class MTKScrollView: MTKView {
             self.frame.height / self.contentSize.height
         )
         let currentZoomScale = self.zoomScale
+        let optimalContentOffset = self.clampedContentOffset(for: optimalZoomScale)
+        let currentContentOffset = self.contentOffset
         if animated, let animation = DisplayLinkAnimation(duration: 0.2, animationHandler: { (progress, _) in
             self.rubberBandClampedZoomScale = lerp(from: currentZoomScale, to: optimalZoomScale, progress: progress, function: .easeOutSine)
-            self.contentOffset = self.clampedContentOffset()
+            self.contentOffset = lerp(from: currentContentOffset, to: optimalContentOffset, progress: progress, function: .easeOutSine)
             self.unclampedZoomScale = self.zoomScale
         }) {
             self.zoomAnimation = animation

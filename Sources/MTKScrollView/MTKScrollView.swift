@@ -229,7 +229,7 @@ open class MTKScrollView: MTKView {
         self.rubberBandClampedZoomScale = clampedZoom + (sign * rubberBandClamp(
             difference,
             coefficient: 0.55,
-            dimension: self.maximumZoomScale - self.minimumZoomScale
+            dimension: (self.maximumZoomScale - self.minimumZoomScale) / 2
         ))
         
         if self.zoomScale == clampedZoom,

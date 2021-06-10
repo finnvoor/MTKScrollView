@@ -226,8 +226,11 @@ open class MTKScrollView: MTKView {
         let clampedZoom = self.unclampedZoomScale.clamped(to: self.minimumZoomScale...self.maximumZoomScale)
         let difference = abs(self.unclampedZoomScale - clampedZoom)
         let sign = sign(self.unclampedZoomScale - clampedZoom)
-        let dimension = (sign > 0 ? self.maximumZoomScale : self.minimumZoomScale) / 4
-        self.rubberBandClampedZoomScale = clampedZoom + (sign * rubberBandClamp(difference, coefficient: 0.55, dimension: dimension))
+        self.rubberBandClampedZoomScale = clampedZoom + (sign * rubberBandClamp(
+            difference,
+            coefficient: 0.55,
+            dimension: self.maximumZoomScale - self.minimumZoomScale
+        ))
         
         if self.zoomScale == clampedZoom,
            self.shouldZoomAroundPoint {

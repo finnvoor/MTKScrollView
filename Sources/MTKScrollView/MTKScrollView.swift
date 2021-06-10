@@ -101,7 +101,11 @@ open class MTKScrollView: MTKView {
     #endif
     
     private func clampedContentOffset(for zoomScale: CGFloat? = nil) -> CGPoint {
-        var bounds = (self.contentSize - ((self.frame.size - self.overscroll) / (zoomScale ?? self.zoomScale))) / 2
+        let overscroll = (
+            self.contentSize.width * (zoomScale ?? self.zoomScale) > self.bounds.width ||
+            self.contentSize.height * (zoomScale ?? self.zoomScale) > self.bounds.height
+        ) ? self.overscroll : .zero
+        var bounds = (self.contentSize - ((self.frame.size - overscroll) / (zoomScale ?? self.zoomScale))) / 2
         bounds.width = max(bounds.width, 0)
         bounds.height = max(bounds.height, 0)
         return CGPoint(

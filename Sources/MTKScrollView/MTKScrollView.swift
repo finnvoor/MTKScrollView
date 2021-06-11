@@ -348,22 +348,24 @@ open class MTKScrollView: MTKView {
             coefficient: 0.55,
             dimension: max(bounds.height, 5)
         ))
-//
-//        if ended {
-//            let clampedContentOffset = self.clampedContentOffset()
-//            // contentOffsetBounceAnimation
-//            if self.contentOffset != clampedContentOffset {
-//                let finishedContentOffset = self.contentOffset
-//                if let animation = DisplayLinkAnimation(duration: 0.15, animationHandler: { (progress, _) in
-//                    self.rubberBandClampedContentOffset = lerp(from: finishedContentOffset, to: clampedContentOffset, progress: progress, function: .easeOutSine)
-//                }) {
-//                    self.contentOffsetBounceAnimation = animation
-//                } else {
-//                    self.rubberBandClampedContentOffset = clampedContentOffset
-//                }
-//            }
-//            self.isZooming = false
-//        }
+
+        if ended {
+            let clampedContentOffset = self.clampedContentOffset()
+            // contentOffsetBounceAnimation
+            if self.contentOffset != clampedContentOffset {
+                let finishedContentOffset = self.contentOffset
+                if let animation = DisplayLinkAnimation(duration: 0.15, animationHandler: { (progress, _) in
+                    self.rubberBandClampedContentOffset = lerp(from: finishedContentOffset, to: clampedContentOffset, progress: progress, function: .easeOutSine)
+                    self.unclampedContentOffset = self.rubberBandClampedContentOffset
+                }) {
+                    self.contentOffsetBounceAnimation = animation
+                } else {
+                    self.rubberBandClampedContentOffset = clampedContentOffset
+                    self.unclampedContentOffset = self.rubberBandClampedContentOffset
+                }
+            }
+            self.isZooming = false
+        }
     }
     
     #if os(iOS)

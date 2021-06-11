@@ -389,8 +389,11 @@ open class MTKScrollView: MTKView {
     
     #else
     
+    private var canScroll = true
     public override func scrollWheel(with event: NSEvent) {
-        guard self.contentOffsetBounceAnimation == nil else { return }
+        if self.contentOffsetBounceAnimation != nil { self.canScroll = false }
+        else if event.phase == .began { self.canScroll = true }
+        guard self.canScroll else { return }
         self.pan(
             by: CGPoint(
                 x: event.scrollingDeltaX / self.zoomScale / (NSScreen.main?.backingScaleFactor ?? 1),

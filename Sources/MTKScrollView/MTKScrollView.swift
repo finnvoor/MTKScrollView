@@ -118,8 +118,8 @@ open class MTKScrollView: MTKView {
     private func clampedContentOffset(for zoomScale: CGFloat? = nil) -> CGPoint {
         let bounds = self.contentOffsetBounds(for: zoomScale)
         return CGPoint(
-            x: self.contentOffset.x.clamped(to: -bounds.width...bounds.width),
-            y: self.contentOffset.y.clamped(to: -bounds.height...bounds.height)
+            x: self.unclampedContentOffset.x.clamped(to: -bounds.width...bounds.width),
+            y: self.unclampedContentOffset.y.clamped(to: -bounds.height...bounds.height)
         )
     }
     
@@ -316,43 +316,44 @@ open class MTKScrollView: MTKView {
         didSet { self.setNeedsDisplay(self.bounds) }
     }
     private func pan(by delta: CGPoint, began: Bool, ended: Bool) {
-//        self.contentOffset += delta
-//        self.contentOffset = self.clampedContentOffset()
-        if began {
-            self.unclampedContentOffset = self.contentOffset
-        }
+        self.rubberBandClampedContentOffset += delta
+        self.rubberBandClampedContentOffset = self.clampedContentOffset()
         
-        self.unclampedContentOffset += delta
-        let clampedContentOffset = self.clampedContentOffset()
-        let difference = abs(self.unclampedContentOffset - clampedContentOffset)
-        let sign = sign(self.unclampedContentOffset - clampedContentOffset)
-        let bounds = self.contentOffsetBounds(for: zoomScale)
-        self.rubberBandClampedContentOffset.x = clampedContentOffset.x + (sign.x * rubberBandClamp(
-            difference.x,
-            coefficient: 0.55,
-            dimension: bounds.width
-        ))
-        self.rubberBandClampedContentOffset.y = clampedContentOffset.y + (sign.y * rubberBandClamp(
-            difference.y,
-            coefficient: 0.55,
-            dimension: bounds.height
-        ))
-        
-        if ended {
-            let clampedContentOffset = self.clampedContentOffset()
-            // contentOffsetBounceAnimation
-            if self.contentOffset != clampedContentOffset {
-                let finishedContentOffset = self.contentOffset
-                if let animation = DisplayLinkAnimation(duration: 0.15, animationHandler: { (progress, _) in
-                    self.rubberBandClampedContentOffset = lerp(from: finishedContentOffset, to: clampedContentOffset, progress: progress, function: .easeOutSine)
-                }) {
-                    self.contentOffsetBounceAnimation = animation
-                } else {
-                    self.rubberBandClampedContentOffset = clampedContentOffset
-                }
-            }
-            self.isZooming = false
-        }
+//        if began {
+//            self.unclampedContentOffset = self.contentOffset
+//        }
+//
+//        self.unclampedContentOffset += delta
+//        let clampedContentOffset = self.clampedContentOffset()
+//        let difference = abs(self.unclampedContentOffset - clampedContentOffset)
+//        let sign = sign(self.unclampedContentOffset - clampedContentOffset)
+//        let bounds = self.contentOffsetBounds()
+//        self.rubberBandClampedContentOffset.x = clampedContentOffset.x + (sign.x * rubberBandClamp(
+//            difference.x,
+//            coefficient: 0.55,
+//            dimension: bounds.width
+//        ))
+//        self.rubberBandClampedContentOffset.y = clampedContentOffset.y + (sign.y * rubberBandClamp(
+//            difference.y,
+//            coefficient: 0.55,
+//            dimension: bounds.height
+//        ))
+//
+//        if ended {
+//            let clampedContentOffset = self.clampedContentOffset()
+//            // contentOffsetBounceAnimation
+//            if self.contentOffset != clampedContentOffset {
+//                let finishedContentOffset = self.contentOffset
+//                if let animation = DisplayLinkAnimation(duration: 0.15, animationHandler: { (progress, _) in
+//                    self.rubberBandClampedContentOffset = lerp(from: finishedContentOffset, to: clampedContentOffset, progress: progress, function: .easeOutSine)
+//                }) {
+//                    self.contentOffsetBounceAnimation = animation
+//                } else {
+//                    self.rubberBandClampedContentOffset = clampedContentOffset
+//                }
+//            }
+//            self.isZooming = false
+//        }
     }
     
     #if os(iOS)

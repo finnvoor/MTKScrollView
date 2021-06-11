@@ -338,20 +338,16 @@ open class MTKScrollView: MTKView {
         let difference = abs(self.unclampedContentOffset - clampedContentOffset)
         let sign = sign(self.unclampedContentOffset - clampedContentOffset)
         let bounds = self.contentOffsetBounds()
-        if self.unclampedContentOffset.x != 0 {
-            self.rubberBandClampedContentOffset.x = clampedContentOffset.x + (sign.x * rubberBandClamp(
-                difference.x,
-                coefficient: 0.55,
-                dimension: bounds.width
-            ))
-        } else { self.rubberBandClampedContentOffset.x = 0 }
-        if self.unclampedContentOffset.y != 0 {
-            self.rubberBandClampedContentOffset.y = clampedContentOffset.y + (sign.y * rubberBandClamp(
-                difference.y,
-                coefficient: 0.55,
-                dimension: bounds.height
-            ))
-        } else { self.rubberBandClampedContentOffset.y = 0 }
+        self.rubberBandClampedContentOffset.x = clampedContentOffset.x + (sign.x * rubberBandClamp(
+            difference.x,
+            coefficient: 0.55,
+            dimension: max(bounds.width, 5)
+        ))
+        self.rubberBandClampedContentOffset.y = clampedContentOffset.y + (sign.y * rubberBandClamp(
+            difference.y,
+            coefficient: 0.55,
+            dimension: max(bounds.height, 5)
+        ))
 //
 //        if ended {
 //            let clampedContentOffset = self.clampedContentOffset()

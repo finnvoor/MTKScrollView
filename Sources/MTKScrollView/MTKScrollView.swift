@@ -316,12 +316,13 @@ open class MTKScrollView: MTKView {
         didSet { self.setNeedsDisplay(self.bounds) }
     }
     private func pan(by delta: CGPoint, began: Bool, ended: Bool) {
+        if began {
+            self.unclampedContentOffset = self.contentOffset
+        }
+
         self.unclampedContentOffset += delta
         self.rubberBandClampedContentOffset = self.clampedContentOffset()
         
-//        if began {
-//            self.unclampedContentOffset = self.contentOffset
-//        }
 //
 //        self.unclampedContentOffset += delta
 //        let clampedContentOffset = self.clampedContentOffset()

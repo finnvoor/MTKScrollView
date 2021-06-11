@@ -254,6 +254,7 @@ open class MTKScrollView: MTKView {
         if self.zoomScale == clampedZoom,
            self.shouldZoomAroundPoint {
             self.rubberBandClampedContentOffset += (self.pointToZoomAround - (self.pointToZoomAround * amount))
+            self.unclampedContentOffset = self.rubberBandClampedContentOffset
             self.pointToZoomAround += (self.pointToZoomAround - (self.pointToZoomAround * amount))
             #if os(iOS)
             let clampedContentOffset = self.clampedContentOffset()
@@ -281,10 +282,12 @@ open class MTKScrollView: MTKView {
                 let finishedContentOffset = self.contentOffset
                 if let animation = DisplayLinkAnimation(duration: 0.15, animationHandler: { (progress, _) in
                     self.rubberBandClampedContentOffset = lerp(from: finishedContentOffset, to: clampedContentOffset, progress: progress, function: .easeOutSine)
+                    self.unclampedContentOffset = self.rubberBandClampedContentOffset
                 }) {
                     self.contentOffsetBounceAnimation = animation
                 } else {
                     self.rubberBandClampedContentOffset = clampedContentOffset
+                    self.unclampedContentOffset = self.rubberBandClampedContentOffset
                 }
             }
             self.isZooming = false

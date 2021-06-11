@@ -96,11 +96,13 @@ open class MTKScrollView: MTKView {
         super.layoutSubviews()
         self.updateZoomBounds()
         self.rubberBandClampedContentOffset = self.clampedContentOffset()
+        self.unclampedContentOffset = self.rubberBandClampedContentOffset
     }
     #else
     public override func layout() {
         super.layout()
         self.rubberBandClampedContentOffset = self.clampedContentOffset()
+        self.unclampedContentOffset = self.rubberBandClampedContentOffset
     }
     #endif
     
@@ -141,12 +143,14 @@ open class MTKScrollView: MTKView {
             self.rubberBandClampedZoomScale = lerp(from: currentZoomScale, to: optimalZoomScale, progress: progress, function: .easeOutSine)
             self.rubberBandClampedContentOffset = lerp(from: currentContentOffset, to: optimalContentOffset, progress: progress, function: .easeOutSine)
             self.unclampedZoomScale = self.zoomScale
+            self.unclampedContentOffset = self.rubberBandClampedContentOffset
         }) {
             self.zoomAnimation = animation
         } else {
             self.rubberBandClampedZoomScale = optimalZoomScale
             self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
+            self.unclampedContentOffset = self.rubberBandClampedContentOffset
         }
     }
     
@@ -162,16 +166,19 @@ open class MTKScrollView: MTKView {
             self.rubberBandClampedZoomScale = lerp(from: currentZoomScale, to: optimalZoomScale, progress: progress, function: .easeOutSine)
             self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
+            self.unclampedContentOffset = self.rubberBandClampedContentOffset
         }, completionHandler: { (_) in
             self.rubberBandClampedZoomScale = optimalZoomScale
             self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
+            self.unclampedContentOffset = self.rubberBandClampedContentOffset
         }) {
             self.zoomAnimation = animation
         } else {
             self.rubberBandClampedZoomScale = optimalZoomScale
             self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
+            self.unclampedContentOffset = self.rubberBandClampedContentOffset
         }
     }
     
@@ -184,16 +191,19 @@ open class MTKScrollView: MTKView {
             self.rubberBandClampedZoomScale = lerp(from: currentZoomScale, to: optimalZoomScale, progress: progress, function: .easeOutSine)
             self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
+            self.unclampedContentOffset = self.rubberBandClampedContentOffset
         }, completionHandler: { (_) in
             self.rubberBandClampedZoomScale = optimalZoomScale
             self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
+            self.unclampedContentOffset = self.rubberBandClampedContentOffset
         }) {
             self.zoomAnimation = animation
         } else {
             self.rubberBandClampedZoomScale = optimalZoomScale
             self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
+            self.unclampedContentOffset = self.rubberBandClampedContentOffset
         }
     }
     
@@ -320,25 +330,25 @@ open class MTKScrollView: MTKView {
             self.unclampedContentOffset = self.contentOffset
         }
 
-        self.unclampedContentOffset += delta
-        self.rubberBandClampedContentOffset = self.clampedContentOffset()
-        
-//
 //        self.unclampedContentOffset += delta
-//        let clampedContentOffset = self.clampedContentOffset()
-//        let difference = abs(self.unclampedContentOffset - clampedContentOffset)
-//        let sign = sign(self.unclampedContentOffset - clampedContentOffset)
-//        let bounds = self.contentOffsetBounds()
-//        self.rubberBandClampedContentOffset.x = clampedContentOffset.x + (sign.x * rubberBandClamp(
-//            difference.x,
-//            coefficient: 0.55,
-//            dimension: bounds.width
-//        ))
-//        self.rubberBandClampedContentOffset.y = clampedContentOffset.y + (sign.y * rubberBandClamp(
-//            difference.y,
-//            coefficient: 0.55,
-//            dimension: bounds.height
-//        ))
+//        self.rubberBandClampedContentOffset = self.clampedContentOffset()
+        
+
+        self.unclampedContentOffset += delta
+        let clampedContentOffset = self.clampedContentOffset()
+        let difference = abs(self.unclampedContentOffset - clampedContentOffset)
+        let sign = sign(self.unclampedContentOffset - clampedContentOffset)
+        let bounds = self.contentOffsetBounds()
+        self.rubberBandClampedContentOffset.x = clampedContentOffset.x + (sign.x * rubberBandClamp(
+            difference.x,
+            coefficient: 0.55,
+            dimension: bounds.width
+        ))
+        self.rubberBandClampedContentOffset.y = clampedContentOffset.y + (sign.y * rubberBandClamp(
+            difference.y,
+            coefficient: 0.55,
+            dimension: bounds.height
+        ))
 //
 //        if ended {
 //            let clampedContentOffset = self.clampedContentOffset()

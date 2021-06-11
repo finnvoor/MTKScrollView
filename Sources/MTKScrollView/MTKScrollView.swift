@@ -349,12 +349,12 @@ open class MTKScrollView: MTKView {
         self.rubberBandClampedContentOffset.x = clampedContentOffset.x + (sign.x * rubberBandClamp(
             difference.x,
             coefficient: 0.55,
-            dimension: max(bounds.width, 5)
+            dimension: max(bounds.width * 2, 5)
         ))
         self.rubberBandClampedContentOffset.y = clampedContentOffset.y + (sign.y * rubberBandClamp(
             difference.y,
             coefficient: 0.55,
-            dimension: max(bounds.height, 5)
+            dimension: max(bounds.height * 2, 5)
         ))
 
         if ended {

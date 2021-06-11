@@ -144,6 +144,8 @@ open class MTKScrollView: MTKView {
             self.rubberBandClampedContentOffset = lerp(from: currentContentOffset, to: optimalContentOffset, progress: progress, function: .easeOutSine)
             self.unclampedZoomScale = self.zoomScale
             self.unclampedContentOffset = self.rubberBandClampedContentOffset
+        }, completionHandler: { _ in
+            self.zoomAnimation = nil
         }) {
             self.zoomAnimation = animation
         } else {
@@ -172,6 +174,7 @@ open class MTKScrollView: MTKView {
             self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
             self.unclampedContentOffset = self.rubberBandClampedContentOffset
+            self.zoomAnimation = nil
         }) {
             self.zoomAnimation = animation
         } else {
@@ -197,6 +200,7 @@ open class MTKScrollView: MTKView {
             self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
             self.unclampedContentOffset = self.rubberBandClampedContentOffset
+            self.zoomAnimation = nil
         }) {
             self.zoomAnimation = animation
         } else {
@@ -269,6 +273,8 @@ open class MTKScrollView: MTKView {
                 let finishedZoom = self.zoomScale
                 if let animation = DisplayLinkAnimation(duration: 0.15, animationHandler: { (progress, _) in
                     self.rubberBandClampedZoomScale = lerp(from: finishedZoom, to: clampedZoom, progress: progress, function: .easeOutSine)
+                }, completionHandler: { _ in
+                    self.zoomBounceAnimation = nil
                 }) {
                     self.zoomBounceAnimation = animation
                 } else {
@@ -283,6 +289,8 @@ open class MTKScrollView: MTKView {
                 if let animation = DisplayLinkAnimation(duration: 0.15, animationHandler: { (progress, _) in
                     self.rubberBandClampedContentOffset = lerp(from: finishedContentOffset, to: clampedContentOffset, progress: progress, function: .easeOutSine)
                     self.unclampedContentOffset = self.rubberBandClampedContentOffset
+                }, completionHandler: { _ in
+                    self.contentOffsetBounceAnimation = nil
                 }) {
                     self.contentOffsetBounceAnimation = animation
                 } else {
@@ -357,6 +365,8 @@ open class MTKScrollView: MTKView {
                 if let animation = DisplayLinkAnimation(duration: 0.15, animationHandler: { (progress, _) in
                     self.rubberBandClampedContentOffset = lerp(from: finishedContentOffset, to: clampedContentOffset, progress: progress, function: .easeOutSine)
                     self.unclampedContentOffset = self.rubberBandClampedContentOffset
+                }, completionHandler: { _ in
+                    self.contentOffsetBounceAnimation = nil
                 }) {
                     self.contentOffsetBounceAnimation = animation
                 } else {
@@ -380,6 +390,7 @@ open class MTKScrollView: MTKView {
     #else
     
     public override func scrollWheel(with event: NSEvent) {
+        guard self.contentOffsetBounceAnimation == nil else { return }
         self.pan(
             by: CGPoint(
                 x: event.scrollingDeltaX / self.zoomScale / (NSScreen.main?.backingScaleFactor ?? 1),

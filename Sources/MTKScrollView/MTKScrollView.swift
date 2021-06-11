@@ -333,10 +333,6 @@ open class MTKScrollView: MTKView {
             self.unclampedContentOffset = self.contentOffset
         }
 
-//        self.unclampedContentOffset += delta
-//        self.rubberBandClampedContentOffset = self.clampedContentOffset()
-        
-
         self.unclampedContentOffset += delta
         let clampedContentOffset = self.clampedContentOffset()
         let difference = abs(self.unclampedContentOffset - clampedContentOffset)

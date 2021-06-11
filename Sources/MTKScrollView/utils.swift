@@ -94,7 +94,7 @@ extension CGSize {
 
 /// Equation from [twitter.com/chpwn](https://twitter.com/chpwn/status/285540192096497664)
 func rubberBandClamp(_ x: CGFloat, coefficient: CGFloat, dimension: CGFloat) -> CGFloat {
-    return (1.0 - (1.0 / ((x * coefficient / dimension) + 1.0))) * dimension
+    return (1.0 - (1.0 / ((x * coefficient / max(dimension, 0.001)) + 1.0))) * max(dimension, 0.001)
 }
 
 func abs(_ point: CGPoint) -> CGPoint {

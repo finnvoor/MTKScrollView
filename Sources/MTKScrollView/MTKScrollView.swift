@@ -26,8 +26,12 @@ open class MTKScrollView: MTKView {
     }
     
     /// The distance between the ScrollableMTKView's center and the center of its content
-    public private(set) var contentOffset: CGPoint = .zero {
-        didSet { self.setNeedsDisplay(self.bounds) }
+//    public private(set) var contentOffset: CGPoint = .zero {
+//        didSet { self.setNeedsDisplay(self.bounds) }
+//    }
+    
+    public var contentOffset: CGPoint {
+        return self.rubberBandClampedContentOffset
     }
     
     var bounces = true
@@ -91,16 +95,16 @@ open class MTKScrollView: MTKView {
     public override func layoutSubviews() {
         super.layoutSubviews()
         self.updateZoomBounds()
-        self.contentOffset = self.clampedContentOffset()
+        self.rubberBandClampedContentOffset = self.clampedContentOffset()
     }
     #else
     public override func layout() {
         super.layout()
-        self.contentOffset = self.clampedContentOffset()
+        self.rubberBandClampedContentOffset = self.clampedContentOffset()
     }
     #endif
     
-    private func clampedContentOffset(for zoomScale: CGFloat? = nil) -> CGPoint {
+    private func contentOffsetBounds(for zoomScale: CGFloat? = nil) -> CGSize {
         let overscroll = (
             self.contentSize.width * (zoomScale ?? self.zoomScale) > self.bounds.width ||
             self.contentSize.height * (zoomScale ?? self.zoomScale) > self.bounds.height
@@ -108,6 +112,11 @@ open class MTKScrollView: MTKView {
         var bounds = (self.contentSize - ((self.frame.size - overscroll) / (zoomScale ?? self.zoomScale))) / 2
         bounds.width = max(bounds.width, 0)
         bounds.height = max(bounds.height, 0)
+        return bounds
+    }
+    
+    private func clampedContentOffset(for zoomScale: CGFloat? = nil) -> CGPoint {
+        let bounds = self.contentOffsetBounds(for: zoomScale)
         return CGPoint(
             x: self.contentOffset.x.clamped(to: -bounds.width...bounds.width),
             y: self.contentOffset.y.clamped(to: -bounds.height...bounds.height)
@@ -130,13 +139,13 @@ open class MTKScrollView: MTKView {
         let currentContentOffset = self.contentOffset
         if animated, let animation = DisplayLinkAnimation(duration: 0.2, animationHandler: { (progress, _) in
             self.rubberBandClampedZoomScale = lerp(from: currentZoomScale, to: optimalZoomScale, progress: progress, function: .easeOutSine)
-            self.contentOffset = lerp(from: currentContentOffset, to: optimalContentOffset, progress: progress, function: .easeOutSine)
+            self.rubberBandClampedContentOffset = lerp(from: currentContentOffset, to: optimalContentOffset, progress: progress, function: .easeOutSine)
             self.unclampedZoomScale = self.zoomScale
         }) {
             self.zoomAnimation = animation
         } else {
             self.rubberBandClampedZoomScale = optimalZoomScale
-            self.contentOffset = self.clampedContentOffset()
+            self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
         }
     }
@@ -151,17 +160,17 @@ open class MTKScrollView: MTKView {
         let currentZoomScale = self.zoomScale
         if animated, let animation = DisplayLinkAnimation(duration: 0.15, animationHandler: { (progress, _) in
             self.rubberBandClampedZoomScale = lerp(from: currentZoomScale, to: optimalZoomScale, progress: progress, function: .easeOutSine)
-            self.contentOffset = self.clampedContentOffset()
+            self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
         }, completionHandler: { (_) in
             self.rubberBandClampedZoomScale = optimalZoomScale
-            self.contentOffset = self.clampedContentOffset()
+            self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
         }) {
             self.zoomAnimation = animation
         } else {
             self.rubberBandClampedZoomScale = optimalZoomScale
-            self.contentOffset = self.clampedContentOffset()
+            self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
         }
     }
@@ -173,17 +182,17 @@ open class MTKScrollView: MTKView {
         let currentZoomScale = self.zoomScale
         if animated, let animation = DisplayLinkAnimation(duration: 0.15, animationHandler: { (progress, _) in
             self.rubberBandClampedZoomScale = lerp(from: currentZoomScale, to: optimalZoomScale, progress: progress, function: .easeOutSine)
-            self.contentOffset = self.clampedContentOffset()
+            self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
         }, completionHandler: { (_) in
             self.rubberBandClampedZoomScale = optimalZoomScale
-            self.contentOffset = self.clampedContentOffset()
+            self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
         }) {
             self.zoomAnimation = animation
         } else {
             self.rubberBandClampedZoomScale = optimalZoomScale
-            self.contentOffset = self.clampedContentOffset()
+            self.rubberBandClampedContentOffset = self.clampedContentOffset()
             self.unclampedZoomScale = self.zoomScale
         }
     }
@@ -234,11 +243,11 @@ open class MTKScrollView: MTKView {
         
         if self.zoomScale == clampedZoom,
            self.shouldZoomAroundPoint {
-            self.contentOffset = self.contentOffset + (self.pointToZoomAround - (self.pointToZoomAround * amount))
-            self.pointToZoomAround = self.pointToZoomAround + (self.pointToZoomAround - (self.pointToZoomAround * amount))
+            self.rubberBandClampedContentOffset += (self.pointToZoomAround - (self.pointToZoomAround * amount))
+            self.pointToZoomAround += (self.pointToZoomAround - (self.pointToZoomAround * amount))
             #if os(iOS)
             let clampedContentOffset = self.clampedContentOffset()
-            self.pointToZoomAround = self.pointToZoomAround + (clampedContentOffset - self.contentOffset)
+            self.pointToZoomAround += (clampedContentOffset - self.contentOffset)
             self.contentOffset = clampedContentOffset
             #endif
         }
@@ -261,11 +270,11 @@ open class MTKScrollView: MTKView {
             if self.contentOffset != clampedContentOffset {
                 let finishedContentOffset = self.contentOffset
                 if let animation = DisplayLinkAnimation(duration: 0.15, animationHandler: { (progress, _) in
-                    self.contentOffset = lerp(from: finishedContentOffset, to: clampedContentOffset, progress: progress, function: .easeOutSine)
+                    self.rubberBandClampedContentOffset = lerp(from: finishedContentOffset, to: clampedContentOffset, progress: progress, function: .easeOutSine)
                 }) {
                     self.contentOffsetBounceAnimation = animation
                 } else {
-                    self.contentOffset = clampedContentOffset
+                    self.rubberBandClampedContentOffset = clampedContentOffset
                 }
             }
             self.isZooming = false
@@ -302,17 +311,55 @@ open class MTKScrollView: MTKView {
     
     // MARK: - Pan
     
-    private var unboundedContentOffset: CGPoint = .zero
-    private func pan(by delta: CGPoint) {
-        self.contentOffset = self.contentOffset + delta
-        self.contentOffset = self.clampedContentOffset()
+    private var unclampedContentOffset: CGPoint = .zero
+    private var rubberBandClampedContentOffset: CGPoint = .zero {
+        didSet { self.setNeedsDisplay(self.bounds) }
+    }
+    private func pan(by delta: CGPoint, began: Bool, ended: Bool) {
+//        self.contentOffset += delta
+//        self.contentOffset = self.clampedContentOffset()
+        if began {
+            self.unclampedContentOffset = self.contentOffset
+        }
+        
+        self.unclampedContentOffset += delta
+        let clampedContentOffset = self.clampedContentOffset()
+        let difference = abs(self.unclampedContentOffset - clampedContentOffset)
+        let sign = sign(self.unclampedContentOffset - clampedContentOffset)
+        let bounds = self.contentOffsetBounds(for: zoomScale)
+        self.rubberBandClampedContentOffset.x = clampedContentOffset.x + (sign.x * rubberBandClamp(
+            difference.x,
+            coefficient: 0.55,
+            dimension: bounds.width
+        ))
+        self.rubberBandClampedContentOffset.y = clampedContentOffset.y + (sign.y * rubberBandClamp(
+            difference.y,
+            coefficient: 0.55,
+            dimension: bounds.height
+        ))
+        
+        if ended {
+            let clampedContentOffset = self.clampedContentOffset()
+            // contentOffsetBounceAnimation
+            if self.contentOffset != clampedContentOffset {
+                let finishedContentOffset = self.contentOffset
+                if let animation = DisplayLinkAnimation(duration: 0.15, animationHandler: { (progress, _) in
+                    self.rubberBandClampedContentOffset = lerp(from: finishedContentOffset, to: clampedContentOffset, progress: progress, function: .easeOutSine)
+                }) {
+                    self.contentOffsetBounceAnimation = animation
+                } else {
+                    self.rubberBandClampedContentOffset = clampedContentOffset
+                }
+            }
+            self.isZooming = false
+        }
     }
     
     #if os(iOS)
     @objc private func handlePan(from gestureRecognizer: UIPanGestureRecognizer) {
         let translation = gestureRecognizer.translation(in: self)
         self.pan(
-            by: CGPoint(x: translation.x / self.zoomScale, y: -translation.y / self.zoomScale)
+            by: translation / self.zoomScale
         )
         gestureRecognizer.setTranslation(.zero, in: self)
     }
@@ -322,9 +369,11 @@ open class MTKScrollView: MTKView {
     public override func scrollWheel(with event: NSEvent) {
         self.pan(
             by: CGPoint(
-                x: event.scrollingDeltaX / self.zoomScale / 2,
-                y: -event.scrollingDeltaY / self.zoomScale / 2
-            )
+                x: event.scrollingDeltaX / self.zoomScale / (NSScreen.main?.backingScaleFactor ?? 1),
+                y: -event.scrollingDeltaY / self.zoomScale / (NSScreen.main?.backingScaleFactor ?? 1)
+            ),
+            began: event.phase == .began,
+            ended: event.phase == .ended
         )
     }
     #endif
@@ -333,7 +382,7 @@ open class MTKScrollView: MTKView {
 
 // MARK: - UIGestureRecognizerDelegate
 #if os(iOS)
-extension ScrollableMTKView: UIGestureRecognizerDelegate {
+extension MTKScrollView: UIGestureRecognizerDelegate {
     public func gestureRecognizer(
         _ gestureRecognizer: UIGestureRecognizer,
         shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer

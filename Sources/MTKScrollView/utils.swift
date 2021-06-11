@@ -97,3 +97,10 @@ func rubberBandClamp(_ x: CGFloat, coefficient: CGFloat, dimension: CGFloat) -> 
     return (1.0 - (1.0 / ((x * coefficient / dimension) + 1.0))) * dimension
 }
 
+func abs(_ point: CGPoint) -> CGPoint {
+    return CGPoint(x: abs(point.x), y: abs(point.y))
+}
+
+func sign(_ point: CGPoint) -> CGPoint {
+    return CGPoint(x: sign(point.x), y: sign(point.y))
+}

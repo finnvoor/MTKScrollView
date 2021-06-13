@@ -89,6 +89,8 @@ open class MTKScrollView: MTKView {
         panGestureRecognizer.minimumNumberOfTouches = 2
         self.addGestureRecognizer(panGestureRecognizer)
         #endif
+        self.isPaused = true
+        self.enableSetNeedsDisplay = true
         self.updateZoomBounds()
     }
 

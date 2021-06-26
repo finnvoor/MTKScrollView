@@ -170,8 +170,8 @@ extension MTKScrollView {
     private func updateZoomBounds() {
         let pixelScale = UIScreen.main.scale
         scrollView.minimumZoomScale = min(
-            bounds.width / contentSize.width,
-            bounds.height / contentSize.height
+            bounds.width / contentSize.width * (2 / 3),
+            bounds.height / contentSize.height * (2 / 3)
         )
         scrollView.maximumZoomScale = pixelScale * 50
         scrollView.zoomScale = min(max(scrollView.zoomScale, scrollView.minimumZoomScale), scrollView.maximumZoomScale)

@@ -20,6 +20,12 @@ extension simd_float4x4 {
     }
 }
 
+extension CGRect {
+    func containsOrOnEdge(_ point: CGPoint) -> Bool {
+        return !(point.x < self.minX || point.x > self.maxX || point.y < self.minY || point.y > self.maxY)
+    }
+}
+
 extension CGAffineTransform {
     func translatedBy(delta: CGPoint) -> CGAffineTransform {
         return self.translatedBy(x: delta.x, y: delta.y)
@@ -68,6 +74,10 @@ extension CGPoint {
     static func -= (lhs: inout CGPoint, rhs: CGPoint) {
         lhs = CGPoint(x: lhs.x - rhs.x, y: lhs.y - rhs.y)
     }
+    
+    static prefix func - (lhs: CGPoint) -> CGPoint {
+        return CGPoint(x: -lhs.x, y: -lhs.y)
+    }
 }
 
 extension CGSize {
@@ -77,6 +87,10 @@ extension CGSize {
 
     static func / (lhs: CGSize, rhs: CGFloat) -> CGSize {
         return CGSize(width: lhs.width / rhs, height: lhs.height / rhs)
+    }
+    
+    static func * (lhs: CGSize, rhs: CGFloat) -> CGSize {
+        return CGSize(width: lhs.width * rhs, height: lhs.height * rhs)
     }
     
     static func / (lhs: CGSize, rhs: CGSize) -> CGSize {

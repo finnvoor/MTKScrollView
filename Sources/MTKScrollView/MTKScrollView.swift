@@ -1,439 +1,183 @@
 //
 //  MTKScrollView.swift
+//  
 //
-//
-//  Created by Finn Voorhees on 10/06/2021.
+//  Created by Finn Voorhees on 26/06/2021.
 //
 
+import Foundation
 import MetalKit
-import DisplayLinkAnimation
 
+/// A view that allows the scrolling and zooming of a MTKView, providing a ``viewMatrix`` for use in vertex shaders.
 open class MTKScrollView: MTKView {
-    /// The size of the ScrollableMTKView's content
-    public var contentSize: CGSize = CGSize(width: 40, height: 40) {
+    /// A Boolean value that determines whether the scroll view content is centered.
+    public var shouldCenterContentView = false {
         didSet {
-            self.updateZoomBounds()
-            self.setNeedsDisplay(self.bounds)
+            layoutSubviews()
+            setNeedsDisplay()
         }
     }
     
-    /// The distance that the ScrollableMTKView's content can scroll past the edge of the view
-    public var overscroll = CGSize(width: 100, height: 100) {
+    /// The size of the scroll view content.
+    public var contentSize: CGSize = .zero {
         didSet {
-            self.updateZoomBounds()
-            self.setNeedsDisplay(self.bounds)
+            scrollView.contentSize = contentSize
+            contentView.frame.size = contentSize
+            updateZoomBounds()
+            zoomToFit()
+            self.setNeedsDisplay()
         }
     }
     
-    /// The distance between the ScrollableMTKView's center and the center of its content
-    public var contentOffset: CGPoint {
-        return self.rubberBandClampedContentOffset
-    }
-    private var rubberBandClampedContentOffset: CGPoint = .zero {
-        didSet { self.setNeedsDisplay(self.bounds) }
-    }
-    private var unclampedContentOffset: CGPoint = .zero
-
-    /// A floating-point value that specifies the current scale factor applied to the ScrollableMTKView's content.
-    public var zoomScale: CGFloat {
-        return self.rubberBandClampedZoomScale
-    }
-    private var rubberBandClampedZoomScale: CGFloat = 1 {
-        didSet { self.setNeedsDisplay(self.bounds) }
-    }
-    private var unclampedZoomScale: CGFloat = 1
-    /// A floating-point value that specifies the maximum scale factor
-    /// that can be applied to the ScrollableMTKView's content.
-    public private(set) var maximumZoomScale: CGFloat = 4
-    /// A floating-point value that specifies the minimum scale factor
-    /// that can be applied to the ScrollableMTKView's content.
-    public private(set) var minimumZoomScale: CGFloat = 0.5
     
-    private var zoomAnimation: DisplayLinkAnimation?
-    private var zoomBounceAnimation: DisplayLinkAnimation?
-    private var contentOffsetBounceAnimation: DisplayLinkAnimation?
-
-    /// The Metal view matrix derived from the view's `frame`, `contentSize`, `zoomScale` and `contentOffset`
+    public var viewTransform: CGAffineTransform {
+        var contentViewBounds: CGRect!
+        if isAnimating,
+           let scrollViewPresentationLayer = scrollView.layer.presentation(),
+           let contentViewPresentationLayer = contentView.layer.presentation() {
+            contentViewBounds = CGRect(
+                x: -scrollViewPresentationLayer.bounds.origin.x,
+                y: -scrollViewPresentationLayer.bounds.origin.y,
+                width: contentViewPresentationLayer.frame.size.width,
+                height: contentViewPresentationLayer.frame.size.height
+            )
+        } else {
+            contentViewBounds = CGRect(
+                x: -scrollView.contentOffset.x,
+                y: -scrollView.contentOffset.y,
+                width: scrollView.contentSize.width,
+                height: scrollView.contentSize.height
+            )
+        }
+        return CGAffineTransform.identity
+            .scaledBy(x: 1, y: -1)
+            .translatedBy(x: -1, y: -1)
+            .scaledBy(x: 2, y: 2)
+            .scaledBy(x: 1 / bounds.width, y: 1 / bounds.height)
+            .translatedBy(x: contentViewBounds.minX, y: contentViewBounds.minY)
+            .scaledBy(x: contentViewBounds.width, y: contentViewBounds.height)
+            .scaledBy(x: 1 / contentSize.width, y: 1 / contentSize.height)
+    }
+    
     public var viewMatrix: simd_float4x4 {
-        return simd_float4x4(
-            CGAffineTransform.identity
-                .scaledBy(scale: 2)
-                .scaledBy(scale: self.zoomScale)
-                .scaledBy(scale: self.contentSize / self.frame.size)
-                .scaledBy(scale: 1 / self.contentSize)
-                .translatedBy(delta: self.contentOffset)
-                .translatedBy(delta: -self.contentSize / 2)
-        )
+        return simd_float4x4(viewTransform)
     }
-
+    
+    private var scrollView: UIScrollView!
+    private var contentView: UIView!
+    
+    private var isAnimating = false
+    private var animationDisplayLink: CADisplayLink? {
+        willSet {
+            animationDisplayLink?.invalidate()
+            isAnimating = false
+        }
+    }
+    private var animationStartTime: CFTimeInterval!
+    private var animationDuration: CFTimeInterval!
+    
     public override init(frame frameRect: CGRect, device: MTLDevice?) {
         super.init(frame: frameRect, device: device)
-        self.sharedInit()
+        commonInit()
     }
-
+    
     public required init(coder: NSCoder) {
         super.init(coder: coder)
-        self.sharedInit()
+        commonInit()
     }
+    
+    private func commonInit() {
+        scrollView = UIScrollView()
+        scrollView.delegate = self
+        scrollView.contentInsetAdjustmentBehavior = .never
+        addSubview(scrollView)
+        scrollView.translatesAutoresizingMaskIntoConstraints = false
+        NSLayoutConstraint.activate([
+            scrollView.leadingAnchor.constraint(equalTo: leadingAnchor),
+            scrollView.trailingAnchor.constraint(equalTo: trailingAnchor),
+            scrollView.topAnchor.constraint(equalTo: topAnchor),
+            scrollView.bottomAnchor.constraint(equalTo: bottomAnchor)
+        ])
+        
+        contentView = UIView(frame: CGRect(origin: .zero, size: contentSize))
+        scrollView.addSubview(contentView)
+        contentView.translatesAutoresizingMaskIntoConstraints = false
 
-    private func sharedInit() {
-        #if os(iOS)
-        let pinchGestureRecognizer = UIPinchGestureRecognizer(
-            target: self,
-            action: #selector(self.handlePinch(from:))
-        )
-        pinchGestureRecognizer.delegate = self
-        self.addGestureRecognizer(pinchGestureRecognizer)
-        let panGestureRecognizer = UIPanGestureRecognizer(target: self, action: #selector(self.handlePan(from:)))
-        panGestureRecognizer.delegate = self
-        panGestureRecognizer.minimumNumberOfTouches = 2
-        self.addGestureRecognizer(panGestureRecognizer)
-        #endif
-        self.isPaused = true
-        self.enableSetNeedsDisplay = true
-        self.updateZoomBounds()
+        isPaused = true
+        enableSetNeedsDisplay = true
     }
-
-    #if os(iOS)
-    public override func layoutSubviews() {
+    
+    open override func layoutSubviews() {
         super.layoutSubviews()
-        self.updateZoomBounds()
-        self.rubberBandClampedContentOffset = self.clampedContentOffset()
-        self.unclampedContentOffset = self.rubberBandClampedContentOffset
+        updateZoomBounds()
+        if shouldCenterContentView { centerContentView() }
+        self.setNeedsDisplay()
     }
-    #else
-    public override func layout() {
-        super.layout()
-        self.rubberBandClampedContentOffset = self.clampedContentOffset()
-        self.unclampedContentOffset = self.rubberBandClampedContentOffset
+    
+    private func centerContentView() {
+        let offsetX = max((scrollView.bounds.width - scrollView.contentSize.width) * 0.5, 0)
+        let offsetY = max((scrollView.bounds.height - scrollView.contentSize.height) * 0.5, 0)
+        scrollView.contentInset = UIEdgeInsets(top: offsetY, left: offsetX, bottom: 0, right: 0)
     }
-    #endif
-
-    private func contentOffsetBounds(for zoomScale: CGFloat? = nil) -> CGSize {
-        let overscroll = (
-            self.contentSize.width * (zoomScale ?? self.zoomScale) > self.bounds.width ||
-            self.contentSize.height * (zoomScale ?? self.zoomScale) > self.bounds.height
-        ) ? self.overscroll : .zero
-        var bounds = (self.contentSize - ((self.frame.size - overscroll) / (zoomScale ?? self.zoomScale))) / 2
-        bounds.width = max(bounds.width, 0)
-        bounds.height = max(bounds.height, 0)
-        return bounds
-    }
-
-    private func clampedContentOffset(for zoomScale: CGFloat? = nil) -> CGPoint {
-        let bounds = self.contentOffsetBounds(for: zoomScale)
-        return CGPoint(
-            x: self.unclampedContentOffset.x.clamped(to: -bounds.width...bounds.width),
-            y: self.unclampedContentOffset.y.clamped(to: -bounds.height...bounds.height)
-        )
-    }
-
-    // MARK: - Zoom
-
-    /// Zooms the ScrollableMTKView to a scale that fits the content exactly
-    public func zoomToFit(animated: Bool = true) {
-        self.zoomAnimation = nil
-        let optimalZoomScale = min(
-            self.frame.width / self.contentSize.width,
-            self.frame.height / self.contentSize.height
-        )
-        let currentZoomScale = self.zoomScale
-        let optimalContentOffset = self.clampedContentOffset(for: optimalZoomScale)
-        let currentContentOffset = self.contentOffset
-        if animated, let animation = DisplayLinkAnimation(duration: 0.3, animationHandler: { (progress, _) in
-            self.rubberBandClampedZoomScale = lerp(
-                from: currentZoomScale,
-                to: optimalZoomScale,
-                progress: progress,
-                function: .easeOutCubic
-            )
-            self.rubberBandClampedContentOffset = lerp(
-                from: currentContentOffset,
-                to: optimalContentOffset,
-                progress: progress,
-                function: .easeOutCubic
-            )
-            self.unclampedZoomScale = self.zoomScale
-            self.unclampedContentOffset = self.rubberBandClampedContentOffset
-        }) {
-            self.zoomAnimation = animation
-        } else {
-            self.rubberBandClampedZoomScale = optimalZoomScale
-            self.rubberBandClampedContentOffset = self.clampedContentOffset()
-            self.unclampedZoomScale = self.zoomScale
-            self.unclampedContentOffset = self.rubberBandClampedContentOffset
+    
+    @objc private func animationHandler() {
+        let elapsed = CACurrentMediaTime() - animationStartTime
+        if elapsed >= animationDuration {
+            animationDisplayLink = nil
+            isAnimating = false
         }
+        setNeedsDisplay()
     }
-
-    /// The multiplier to use for calls to `zoomIn()` and `zoomOut()`
-    public var zoomIncrement: CGFloat = 1.75
-
-    /// Zooms the ScrollableMTKView in by a factor of `zoomIncrement`
-    public func zoomIn(animated: Bool = true) {
-        self.zoomAnimation = nil
-        let optimalZoomScale = min(self.maximumZoomScale, self.zoomScale * self.zoomIncrement)
-        let currentZoomScale = self.zoomScale
-        if animated, let animation = DisplayLinkAnimation(duration: 0.2, animationHandler: { (progress, _) in
-            self.rubberBandClampedZoomScale = lerp(
-                from: currentZoomScale,
-                to: optimalZoomScale,
-                progress: progress,
-                function: .easeOutCubic
-            )
-            self.rubberBandClampedContentOffset = self.clampedContentOffset()
-            self.unclampedZoomScale = self.zoomScale
-            self.unclampedContentOffset = self.rubberBandClampedContentOffset
-        }, completionHandler: { (_) in
-            self.rubberBandClampedZoomScale = optimalZoomScale
-            self.rubberBandClampedContentOffset = self.clampedContentOffset()
-            self.unclampedZoomScale = self.zoomScale
-            self.unclampedContentOffset = self.rubberBandClampedContentOffset
-        }) {
-            self.zoomAnimation = animation
-        } else {
-            self.rubberBandClampedZoomScale = optimalZoomScale
-            self.rubberBandClampedContentOffset = self.clampedContentOffset()
-            self.unclampedZoomScale = self.zoomScale
-            self.unclampedContentOffset = self.rubberBandClampedContentOffset
+    
+    private func displayAndCheckForAnimations() {
+        if !(scrollView.layer.animationKeys()?.isEmpty ?? true) ||
+            !(contentView.layer.animationKeys()?.isEmpty ?? true) {
+            let scrollViewAnimationDuration = (scrollView.layer.animationKeys() ?? []).compactMap({
+                scrollView.layer.animation(forKey: $0)?.duration
+            }).max() ?? 0
+            let contentViewAnimationDuration = (contentView.layer.animationKeys() ?? []).compactMap({
+                contentView.layer.animation(forKey: $0)?.duration
+            }).max() ?? 0
+            animationDisplayLink = CADisplayLink(target: self, selector: #selector(animationHandler))
+            isAnimating = true
+            animationStartTime = CACurrentMediaTime()
+            animationDuration = max(scrollViewAnimationDuration, contentViewAnimationDuration)
+            animationDisplayLink?.add(to: .current, forMode: .default)
         }
+        setNeedsDisplay()
     }
+}
 
-    /// Zooms the ScrollableMTKView out by a factor of `zoomIncrement`
-    public func zoomOut(animated: Bool = true) {
-        self.zoomAnimation = nil
-        let optimalZoomScale = max(self.minimumZoomScale, self.zoomScale / self.zoomIncrement)
-        let currentZoomScale = self.zoomScale
-        if animated, let animation = DisplayLinkAnimation(duration: 0.2, animationHandler: { (progress, _) in
-            self.rubberBandClampedZoomScale = lerp(
-                from: currentZoomScale,
-                to: optimalZoomScale,
-                progress: progress,
-                function: .easeOutCubic
-            )
-            self.rubberBandClampedContentOffset = self.clampedContentOffset()
-            self.unclampedZoomScale = self.zoomScale
-            self.unclampedContentOffset = self.rubberBandClampedContentOffset
-        }, completionHandler: { (_) in
-            self.rubberBandClampedZoomScale = optimalZoomScale
-            self.rubberBandClampedContentOffset = self.clampedContentOffset()
-            self.unclampedZoomScale = self.zoomScale
-            self.unclampedContentOffset = self.rubberBandClampedContentOffset
-        }) {
-            self.zoomAnimation = animation
-        } else {
-            self.rubberBandClampedZoomScale = optimalZoomScale
-            self.rubberBandClampedContentOffset = self.clampedContentOffset()
-            self.unclampedZoomScale = self.zoomScale
-            self.unclampedContentOffset = self.rubberBandClampedContentOffset
-        }
+extension MTKScrollView {
+    public func zoomToFit(animated: Bool = false) {
+        scrollView.setZoomScale(min(
+            bounds.width / contentSize.width,
+            bounds.height / contentSize.height
+        ), animated: animated)
     }
-
+    
     private func updateZoomBounds() {
-        #if os(iOS)
         let pixelScale = UIScreen.main.scale
-        self.minimumZoomScale = min(
-            (self.frame.width - self.overscroll.width) / self.contentSize.width,
-            (self.frame.height - self.overscroll.height) / self.contentSize.height
+        scrollView.minimumZoomScale = min(
+            bounds.width / contentSize.width,
+            bounds.height / contentSize.height
         )
-        #else
-        let pixelScale = NSScreen.main?.backingScaleFactor ?? 2.0
-        self.minimumZoomScale = (pixelScale * 50) / max(self.contentSize.width, self.contentSize.height)
-        #endif
-        self.maximumZoomScale = (pixelScale * 50)
-        self.rubberBandClampedZoomScale = self.zoomScale.clamped(to: self.minimumZoomScale...self.maximumZoomScale)
+        scrollView.maximumZoomScale = pixelScale * 50
+        scrollView.zoomScale = min(max(scrollView.zoomScale, scrollView.minimumZoomScale), scrollView.maximumZoomScale)
     }
-
-    private var shouldZoomAroundPoint = false
-    private var pointToZoomAround: CGPoint = .zero
-    private func zoom(by amount: CGFloat, around point: CGPoint, began: Bool, ended: Bool) {
-        if began {
-            self.unclampedZoomScale = self.zoomScale
-            self.pointToZoomAround = point
-            self.shouldZoomAroundPoint = CGRect(
-                origin: self.contentOffset - CGPoint(x: self.contentSize.width / 2, y: self.contentSize.height / 2),
-                size: self.contentSize
-            ).contains(point) && (
-                amount > 1 ||
-                self.contentSize.width * self.zoomScale > self.bounds.width ||
-                self.contentSize.height * self.zoomScale > self.bounds.height
-            )
-        }
-
-        self.unclampedZoomScale *= amount
-        let clampedZoom = self.unclampedZoomScale.clamped(to: self.minimumZoomScale...self.maximumZoomScale)
-        let difference = abs(self.unclampedZoomScale - clampedZoom)
-        let sign = sign(self.unclampedZoomScale - clampedZoom)
-        self.rubberBandClampedZoomScale = clampedZoom + (sign * rubberBandClamp(
-            difference,
-            coefficient: 0.55,
-            dimension: (sign > 0 ? self.maximumZoomScale : self.minimumZoomScale) / 4
-        ))
-
-        if self.zoomScale == clampedZoom,
-           self.shouldZoomAroundPoint {
-            self.rubberBandClampedContentOffset += (self.pointToZoomAround - (self.pointToZoomAround * amount))
-            self.unclampedContentOffset = self.rubberBandClampedContentOffset
-            self.pointToZoomAround += (self.pointToZoomAround - (self.pointToZoomAround * amount))
-            #if os(iOS)
-            let clampedContentOffset = self.clampedContentOffset()
-            self.pointToZoomAround += (clampedContentOffset - self.contentOffset)
-            self.contentOffset = clampedContentOffset
-            #endif
-        }
-
-        if ended {
-            // zoomBounceAnimation
-            if self.zoomScale != clampedZoom {
-                let finishedZoom = self.zoomScale
-                if let animation = DisplayLinkAnimation(duration: 0.3, animationHandler: { (progress, _) in
-                    self.rubberBandClampedZoomScale = lerp(
-                        from: finishedZoom,
-                        to: clampedZoom,
-                        progress: progress,
-                        function: .easeOutCubic
-                    )
-                }) {
-                    self.zoomBounceAnimation = animation
-                } else {
-                    self.rubberBandClampedZoomScale = clampedZoom
-                }
-            }
-
-            let clampedContentOffset = self.clampedContentOffset(for: clampedZoom)
-            // contentOffsetBounceAnimation
-            if self.contentOffset != clampedContentOffset {
-                let finishedContentOffset = self.contentOffset
-                if let animation = DisplayLinkAnimation(duration: 0.3, animationHandler: { (progress, _) in
-                    self.rubberBandClampedContentOffset = lerp(
-                        from: finishedContentOffset,
-                        to: clampedContentOffset,
-                        progress: progress,
-                        function: .easeOutCubic
-                    )
-                    self.unclampedContentOffset = self.rubberBandClampedContentOffset
-                }) {
-                    self.contentOffsetBounceAnimation = animation
-                } else {
-                    self.rubberBandClampedContentOffset = clampedContentOffset
-                    self.unclampedContentOffset = self.rubberBandClampedContentOffset
-                }
-            }
-        }
-    }
-
-    #if os(iOS)
-    @objc private func handlePinch(from gestureRecognizer: UIPinchGestureRecognizer) {
-        var location = gestureRecognizer.location(in: self)
-        location -= CGPoint(x: self.bounds.midX, y: self.bounds.midY)
-        location.y = -location.y
-        self.zoom(
-            by: gestureRecognizer.scale,
-            around: location / self.zoomScale,
-            began: gestureRecognizer.state == .began,
-            ended: gestureRecognizer.state == .ended
-        )
-        gestureRecognizer.scale = 1
-    }
-
-    #else
-
-    public override func magnify(with event: NSEvent) {
-        if event.phase == .began {
-            self.zoomBounceAnimation = nil
-        }
-        var location = self.convert(event.locationInWindow, from: nil)
-        location -= CGPoint(x: self.bounds.midX, y: self.bounds.midY)
-        self.zoom(
-            by: 1 + event.magnification,
-            around: location / self.zoomScale,
-            began: event.phase == .began,
-            ended: event.phase == .ended
-        )
-    }
-    #endif
-
-    // MARK: - Pan
-    private func pan(by delta: CGPoint, began: Bool, ended: Bool, momentum: Bool) {
-        if began {
-            self.unclampedContentOffset = self.contentOffset
-        }
-
-        self.unclampedContentOffset += delta
-        let clampedContentOffset = self.clampedContentOffset()
-        let difference = abs(self.unclampedContentOffset - clampedContentOffset)
-        let sign = sign(self.unclampedContentOffset - clampedContentOffset)
-        let bounds = self.contentOffsetBounds()
-        self.rubberBandClampedContentOffset.x = clampedContentOffset.x + (sign.x * rubberBandClamp(
-            difference.x,
-            coefficient: 0.55,
-            dimension: max(bounds.width / 2, 5)
-        ))
-        self.rubberBandClampedContentOffset.y = clampedContentOffset.y + (sign.y * rubberBandClamp(
-            difference.y,
-            coefficient: 0.55,
-            dimension: max(bounds.height / 2, 5)
-        ))
-
-        if ended || momentum {
-            let clampedContentOffset = self.clampedContentOffset()
-            // contentOffsetBounceAnimation
-            if self.contentOffset != clampedContentOffset {
-                let finishedContentOffset = self.contentOffset
-                if let animation = DisplayLinkAnimation(duration: 0.3, animationHandler: { (progress, _) in
-                    self.rubberBandClampedContentOffset = lerp(
-                        from: finishedContentOffset,
-                        to: clampedContentOffset,
-                        progress: progress,
-                        function: .easeOutCubic
-                    )
-                    self.unclampedContentOffset = self.rubberBandClampedContentOffset
-                }) {
-                    self.contentOffsetBounceAnimation = animation
-                } else {
-                    self.rubberBandClampedContentOffset = clampedContentOffset
-                    self.unclampedContentOffset = self.rubberBandClampedContentOffset
-                }
-            }
-        }
-    }
-
-    #if os(iOS)
-    @objc private func handlePan(from gestureRecognizer: UIPanGestureRecognizer) {
-        let translation = gestureRecognizer.translation(in: self)
-        self.pan(
-            by: translation / self.zoomScale
-        )
-        gestureRecognizer.setTranslation(.zero, in: self)
-    }
-
-    #else
-
-    public override func scrollWheel(with event: NSEvent) {
-        if event.phase == .began {
-            self.contentOffsetBounceAnimation = nil
-        }
-        guard self.contentOffsetBounceAnimation == nil else { return }
-        self.pan(
-            by: CGPoint(
-                x: event.scrollingDeltaX / self.zoomScale / (NSScreen.main?.backingScaleFactor ?? 1),
-                y: -event.scrollingDeltaY / self.zoomScale / (NSScreen.main?.backingScaleFactor ?? 1)
-            ),
-            began: event.phase == .began,
-            ended: event.phase == .ended,
-            momentum: event.momentumPhase == .changed
-        )
-    }
-    #endif
 }
 
-// MARK: - UIGestureRecognizerDelegate
-#if os(iOS)
-extension MTKScrollView: UIGestureRecognizerDelegate {
-    public func gestureRecognizer(
-        _ gestureRecognizer: UIGestureRecognizer,
-        shouldRecognizeSimultaneouslyWith otherGestureRecognizer: UIGestureRecognizer
-    ) -> Bool {
-        return true
+extension MTKScrollView: UIScrollViewDelegate {
+    public func viewForZooming(in scrollView: UIScrollView) -> UIView? {
+        return contentView
+    }
+    
+    public func scrollViewDidZoom(_ scrollView: UIScrollView) {
+        if shouldCenterContentView { centerContentView() }
+        displayAndCheckForAnimations()
+    }
+    
+    public func scrollViewDidScroll(_ scrollView: UIScrollView) {
+        displayAndCheckForAnimations()
     }
 }
-#endif

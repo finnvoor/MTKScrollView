@@ -1,7 +1,10 @@
 # TODO
 
 - [ ] Rubber band zoom around point instead of center
-- [ ] Pan rubber band and bounce
+- [x] Pan rubber band and bounce
+    - [ ] Improve it
 - [ ] iOS pan inertia
 - [ ] Scroll bars
 - [ ] Option-scroll to zoom on macOS
+- [ ] State Restoration
+- [ ] Add tests?

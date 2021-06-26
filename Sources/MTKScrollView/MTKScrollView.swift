@@ -11,7 +11,7 @@ import MetalKit
 /// A view that allows the scrolling and zooming of a MTKView, providing a ``viewMatrix`` for use in vertex shaders.
 open class MTKScrollView: MTKView {
     /// A Boolean value that determines whether the scroll view content is centered.
-    public var shouldCenterContentView = false {
+    public var shouldCenterContentView = true {
         didSet {
             layoutSubviews()
             setNeedsDisplay()
@@ -29,7 +29,9 @@ open class MTKScrollView: MTKView {
         }
     }
     
-    
+    /// An affine transformation matrix mapping between the content vector space and the scrolled, offset, Metal coordinate vector space.
+    /// The content vector space has origin (0, 0) and size ``contentSize``.
+    /// The scrolled, offset, Metal coordinate vector space applies a scale and offset as well as mapping to the Metal coordinate space (origin: [-1, -1] size: [2, 2]).
     public var viewTransform: CGAffineTransform {
         var contentViewBounds: CGRect!
         if isAnimating,
@@ -59,8 +61,16 @@ open class MTKScrollView: MTKView {
             .scaledBy(x: 1 / contentSize.width, y: 1 / contentSize.height)
     }
     
+    /// A `simd_float4x4` matrix mapping between the content vector space and the scrolled, offset, Metal coordinate vector space.
+    /// See ``viewTransform`` for more info.
     public var viewMatrix: simd_float4x4 {
-        return simd_float4x4(viewTransform)
+        let caTransform = CATransform3DMakeAffineTransform(viewTransform)
+        return simd_float4x4([
+            [Float(caTransform.m11), Float(caTransform.m12), Float(caTransform.m13), Float(caTransform.m14)],
+            [Float(caTransform.m21), Float(caTransform.m22), Float(caTransform.m23), Float(caTransform.m24)],
+            [Float(caTransform.m31), Float(caTransform.m32), Float(caTransform.m33), Float(caTransform.m34)],
+            [Float(caTransform.m41), Float(caTransform.m42), Float(caTransform.m43), Float(caTransform.m44)]
+        ])
     }
     
     private var scrollView: UIScrollView!
@@ -149,6 +159,7 @@ open class MTKScrollView: MTKView {
 }
 
 extension MTKScrollView {
+    /// Zooms to precisely fit the ``contentSize`` in the view's frame.
     public func zoomToFit(animated: Bool = false) {
         scrollView.setZoomScale(min(
             bounds.width / contentSize.width,

@@ -126,7 +126,7 @@ open class MTKScrollView: MTKView {
     
     /// Converts a point from the ``MTKScrollView``'s coordinate system to that of the content view.
     public func convertToContentView(_ point: CGPoint) -> CGPoint {
-        return scrollView.convert(point, to: contentView)
+        return convert(point, to: contentView)
     }
     
     private func centerContentView() {

@@ -124,6 +124,11 @@ open class MTKScrollView: MTKView {
         self.setNeedsDisplay()
     }
     
+    /// Converts a point from the ``MTKScrollView``'s coordinate system to that of the content view.
+    public func convertToContentView(_ point: CGPoint) -> CGPoint {
+        return scrollView.convert(point, to: contentView)
+    }
+    
     private func centerContentView() {
         let offsetX = max((scrollView.bounds.width - scrollView.contentSize.width) * 0.5, 0)
         let offsetY = max((scrollView.bounds.height - scrollView.contentSize.height) * 0.5, 0)

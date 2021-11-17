@@ -71,8 +71,6 @@ open class MTKScrollView: MTKView {
     
     private func setupDocumentView() {
         documentView.translatesAutoresizingMaskIntoConstraints = false
-        documentView.wantsLayer = true
-        documentView.layer?.backgroundColor = NSColor.red.withAlphaComponent(0.5).cgColor
     }
 
     private func setupScrollView() {

@@ -4,6 +4,7 @@
 //
 //  Created by Finn Voorhees on 16/11/2021.
 //
+#if os(macOS)
 
 import Combine
 import MetalKit
@@ -17,52 +18,35 @@ open class MTKScrollView: MTKView {
     /// An affine transformation matrix mapping between the content vector space and the scrolled, offset, Metal coordinate vector space.
     /// The content vector space has origin (0, 0) and size ``contentSize``.
     /// The scrolled, offset, Metal coordinate vector space applies a scale and offset as well as mapping to the Metal coordinate space (origin: [-1, -1] size: [2, 2]).
-//    public var viewTransform: CGAffineTransform {
-//        var contentViewBounds: CGRect!
-//        if isAnimating,
-//           let scrollViewPresentationLayer = scrollView.layer.presentation(),
-//           let contentViewPresentationLayer = contentView.layer.presentation() {
-//            contentViewBounds = CGRect(
-//                x: -scrollViewPresentationLayer.bounds.origin.x,
-//                y: -scrollViewPresentationLayer.bounds.origin.y,
-//                width: contentViewPresentationLayer.frame.size.width,
-//                height: contentViewPresentationLayer.frame.size.height
-//            )
-//        } else {
-//            contentViewBounds = CGRect(
-//                x: -scrollView.contentOffset.x,
-//                y: -scrollView.contentOffset.y,
-//                width: scrollView.contentSize.width,
-//                height: scrollView.contentSize.height
-//            )
-//        }
-//        return CGAffineTransform.identity
-//            .scaledBy(x: 1, y: -1)
-//            .translatedBy(x: -1, y: -1)
-//            .scaledBy(x: 2, y: 2)
-//            .scaledBy(x: 1 / bounds.width, y: 1 / bounds.height)
-//            .translatedBy(x: contentViewBounds.minX, y: contentViewBounds.minY)
-//            .scaledBy(x: contentViewBounds.width, y: contentViewBounds.height)
-//            .scaledBy(x: 1 / contentSize.width, y: 1 / contentSize.height)
-//    }
+    public var viewTransform: CGAffineTransform {
+        return CGAffineTransform.identity
+            .scaledBy(
+                x: 2 / scrollView.documentVisibleRect.width * maxPixelSize,
+                y: 2 / scrollView.documentVisibleRect.height * maxPixelSize
+            )
+            .translatedBy(
+                x: -scrollView.documentVisibleRect.midX / maxPixelSize,
+                y: -scrollView.documentVisibleRect.midY / maxPixelSize
+            )
+    }
 
     /// A `simd_float4x4` matrix mapping between the content vector space and the scrolled, offset, Metal coordinate vector space.
     /// See ``viewTransform`` for more info.
-//    public var viewMatrix: simd_float4x4 {
-//        let caTransform = CATransform3DMakeAffineTransform(viewTransform)
-//        return simd_float4x4([
-//            [Float(caTransform.m11), Float(caTransform.m12), Float(caTransform.m13), Float(caTransform.m14)],
-//            [Float(caTransform.m21), Float(caTransform.m22), Float(caTransform.m23), Float(caTransform.m24)],
-//            [Float(caTransform.m31), Float(caTransform.m32), Float(caTransform.m33), Float(caTransform.m34)],
-//            [Float(caTransform.m41), Float(caTransform.m42), Float(caTransform.m43), Float(caTransform.m44)]
-//        ])
-//    }
+    public var viewMatrix: simd_float4x4 {
+        let caTransform = CATransform3DMakeAffineTransform(viewTransform)
+        return simd_float4x4([
+            [Float(caTransform.m11), Float(caTransform.m12), Float(caTransform.m13), Float(caTransform.m14)],
+            [Float(caTransform.m21), Float(caTransform.m22), Float(caTransform.m23), Float(caTransform.m24)],
+            [Float(caTransform.m31), Float(caTransform.m32), Float(caTransform.m33), Float(caTransform.m34)],
+            [Float(caTransform.m41), Float(caTransform.m42), Float(caTransform.m43), Float(caTransform.m44)]
+        ])
+    }
 
     private var maxPixelSize: CGFloat = 10 {
         didSet { updateContentSizeAndScale() }
     }
     private let documentView = NSView()
-    public let scrollView = NSScrollView()
+    private let scrollView = NSScrollView()
     
     private var boundsDidChangeCancellable: AnyCancellable?
     
@@ -88,7 +72,7 @@ open class MTKScrollView: MTKView {
     private func setupDocumentView() {
         documentView.translatesAutoresizingMaskIntoConstraints = false
         documentView.wantsLayer = true
-        documentView.layer?.backgroundColor = NSColor.red.cgColor
+        documentView.layer?.backgroundColor = NSColor.red.withAlphaComponent(0.5).cgColor
     }
 
     private func setupScrollView() {
@@ -154,3 +138,4 @@ fileprivate class CenteredClipView: NSClipView {
         return rect
     }
 }
+#endif

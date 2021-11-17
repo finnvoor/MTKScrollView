@@ -74,8 +74,6 @@ open class MTKScrollView: MTKView {
     }
 
     private func setupScrollView() {
-        scrollView.drawsBackground = false
-        scrollView.backgroundColor = .clear
         scrollView.allowsMagnification = true
         scrollView.hasVerticalScroller = true
         scrollView.hasHorizontalScroller = true
@@ -94,6 +92,7 @@ open class MTKScrollView: MTKView {
             scrollView.topAnchor.constraint(equalTo: topAnchor),
             scrollView.bottomAnchor.constraint(equalTo: bottomAnchor)
         ])
+        scrollView.drawsBackground = false
     }
     
     private func updateContentSizeAndScale() {
@@ -109,28 +108,28 @@ open class MTKScrollView: MTKView {
         scrollView.minMagnification = min(fittingMagnification / 2, 1)
     }
     
-    public override func resizeSubviews(withOldSize oldSize: NSSize) {
+    open override func resizeSubviews(withOldSize oldSize: NSSize) {
         super.resizeSubviews(withOldSize: oldSize)
         updateContentSizeAndScale()
     }
     
     public func zoomToFit(animated: Bool = false) {
-        (animated ? scrollView.animator() : scrollView).magnification = min(
+        (animated ? scrollView.animator() : scrollView).magnification = min(min(
             bounds.width / (documentView.bounds.size.width),
             bounds.height / (documentView.bounds.size.height)
-        )
+        ), 1)
     }
 }
 
 fileprivate class CenteredClipView: NSClipView {
     override func constrainBoundsRect(_ proposedBounds: NSRect) -> NSRect {
         var rect = super.constrainBoundsRect(proposedBounds)
-        if let containerView = self.documentView {
-            if (rect.size.width > containerView.frame.size.width) {
-                rect.origin.x = (containerView.frame.width - rect.width) / 2
+        if let documentView = documentView {
+            if (rect.size.width > documentView.frame.size.width) {
+                rect.origin.x = (documentView.frame.width - rect.width) / 2
             }
-            if(rect.size.height > containerView.frame.size.height) {
-                rect.origin.y = (containerView.frame.height - rect.height) / 2
+            if(rect.size.height > documentView.frame.size.height) {
+                rect.origin.y = (documentView.frame.height - rect.height) / 2
             }
         }
         return rect

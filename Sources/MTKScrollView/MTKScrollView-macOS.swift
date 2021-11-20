@@ -41,6 +41,16 @@ open class MTKScrollView: MTKView {
             [Float(caTransform.m41), Float(caTransform.m42), Float(caTransform.m43), Float(caTransform.m44)]
         ])
     }
+    
+    public var magnification: CGFloat { return scrollView.magnification }
+    public var minMagnification: CGFloat { return scrollView.minMagnification }
+    public var maxMagnification: CGFloat { return scrollView.maxMagnification }
+    public var fittingMagnification: CGFloat {
+        return min(
+            bounds.width / (documentView.bounds.size.width),
+            bounds.height / (documentView.bounds.size.height)
+        )
+    }
 
     private var maxPixelSize: CGFloat = 10 {
         didSet { updateContentSizeAndScale() }
@@ -100,10 +110,6 @@ open class MTKScrollView: MTKView {
             width: contentSize.width * maxPixelSize,
             height: contentSize.height * maxPixelSize
         )
-        let fittingMagnification = min(
-            bounds.width / (documentView.bounds.size.width),
-            bounds.height / (documentView.bounds.size.height)
-        )
         scrollView.maxMagnification = 1
         scrollView.minMagnification = min(fittingMagnification / 2, 1)
     }
@@ -114,10 +120,7 @@ open class MTKScrollView: MTKView {
     }
     
     public func zoomToFit(animated: Bool = false) {
-        (animated ? scrollView.animator() : scrollView).magnification = min(min(
-            bounds.width / (documentView.bounds.size.width),
-            bounds.height / (documentView.bounds.size.height)
-        ), 1)
+        (animated ? scrollView.animator() : scrollView).magnification = fittingMagnification
     }
 }
 

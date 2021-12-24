@@ -122,6 +122,11 @@ open class MTKScrollView: MTKView {
     public func zoomToFit(animated: Bool = false) {
         (animated ? scrollView.animator() : scrollView).magnification = fittingMagnification
     }
+    
+    /// Converts a point from the scroll view’s interior coordinate system to its content view coordinate system.
+    public func convertToCanvas(_ point: CGPoint) -> CGPoint {
+        return (viewMatrix.inverse * (((point / bounds.size) * 2) - 1)) + (contentSize / 2)
+    }
 }
 
 fileprivate class CenteredClipView: NSClipView {

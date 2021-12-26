@@ -9,6 +9,8 @@
 import Combine
 import MetalKit
 
+fileprivate class NSFlippedView: NSView { override var isFlipped: Bool { true } }
+
 open class MTKScrollView: MTKView {
     /// The size of the scroll view content.
     public var contentSize: CGSize = CGSize(width: 300, height: 200) {
@@ -24,6 +26,7 @@ open class MTKScrollView: MTKView {
                 x: 2 / scrollView.documentVisibleRect.width * maxPixelSize,
                 y: 2 / scrollView.documentVisibleRect.height * maxPixelSize
             )
+            .scaledBy(x: 1, y: -1)
             .translatedBy(
                 x: -scrollView.documentVisibleRect.midX / maxPixelSize,
                 y: -scrollView.documentVisibleRect.midY / maxPixelSize
@@ -55,7 +58,7 @@ open class MTKScrollView: MTKView {
     private var maxPixelSize: CGFloat = 10 {
         didSet { updateContentSizeAndScale() }
     }
-    private let documentView = NSView()
+    private let documentView = NSFlippedView()
     private let scrollView = NSScrollView()
     
     private var boundsDidChangeCancellable: AnyCancellable?

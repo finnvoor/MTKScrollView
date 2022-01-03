@@ -20,7 +20,7 @@ open class MTKScrollView: MTKView {
     }
 
     /// The size of the scroll view content.
-    public var contentSize: CGSize = .zero {
+    public var contentSize: CGSize = CGSize(width: 300, height: 200) {
         didSet {
             scrollView.contentSize = contentSize
             contentView.frame.size = contentSize

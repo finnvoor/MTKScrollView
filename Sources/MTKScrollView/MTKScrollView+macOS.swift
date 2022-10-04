@@ -23,13 +23,13 @@ open class MTKScrollView: MTKView {
     public var viewTransform: CGAffineTransform {
         return CGAffineTransform.identity
             .scaledBy(
-                x: 2 / scrollView.documentVisibleRect.width * maxPixelSize,
-                y: 2 / scrollView.documentVisibleRect.height * maxPixelSize
+                x: 2 / scrollView.documentVisibleRect.width * maxPixelSize * (NSScreen.main?.backingScaleFactor ?? 1),
+                y: 2 / scrollView.documentVisibleRect.height * maxPixelSize * (NSScreen.main?.backingScaleFactor ?? 1)
             )
             .scaledBy(x: 1, y: -1)
             .translatedBy(
-                x: -scrollView.documentVisibleRect.midX / maxPixelSize,
-                y: -scrollView.documentVisibleRect.midY / maxPixelSize
+                x: -scrollView.documentVisibleRect.midX / (maxPixelSize * (NSScreen.main?.backingScaleFactor ?? 1)),
+                y: -scrollView.documentVisibleRect.midY / (maxPixelSize * (NSScreen.main?.backingScaleFactor ?? 1))
             )
     }
 
@@ -110,8 +110,8 @@ open class MTKScrollView: MTKView {
     
     private func updateContentSizeAndScale() {
         documentView.frame.size = CGSize(
-            width: contentSize.width * maxPixelSize,
-            height: contentSize.height * maxPixelSize
+            width: contentSize.width * maxPixelSize * (NSScreen.main?.backingScaleFactor ?? 1),
+            height: contentSize.height * maxPixelSize * (NSScreen.main?.backingScaleFactor ?? 1)
         )
         scrollView.maxMagnification = 1
         scrollView.minMagnification = min(fittingMagnification / 2, 1)

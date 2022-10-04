@@ -55,7 +55,7 @@ open class MTKScrollView: MTKView {
         )
     }
 
-    private var maxPixelSize: CGFloat = 10 {
+    private var maxPixelSize: CGFloat = 20 {
         didSet { updateContentSizeAndScale() }
     }
     private let documentView = NSFlippedView()

@@ -126,9 +126,13 @@ open class MTKScrollView: MTKView {
         (animated ? scrollView.animator() : scrollView).magnification = fittingMagnification
     }
     
-    /// Converts a point from the scroll view’s interior coordinate system to its content view coordinate system.
+    /// Converts a point from the ``MTKScrollView``'s coordinate system to that of the canvas..
     public func convertToCanvas(_ point: CGPoint) -> CGPoint {
-        return (viewMatrix.inverse * (((point / bounds.size) * 2) - 1)) + (contentSize / 2)
+        let point = convert(point, to: documentView)
+        return CGPoint(
+            x: point.x / maxPixelSize / (NSScreen.main?.backingScaleFactor ?? 1),
+            y: point.y / maxPixelSize / (NSScreen.main?.backingScaleFactor ?? 1)
+        )
     }
 }
 

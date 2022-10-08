@@ -125,8 +125,8 @@ open class MTKScrollView: MTKView {
         self.setNeedsDisplay()
     }
 
-    /// Converts a point from the ``MTKScrollView``'s coordinate system to that of the content view.
-    public func convertToContentView(_ point: CGPoint) -> CGPoint {
+    /// Converts a point from the ``MTKScrollView``'s coordinate system to that of the canvas..
+    public func convertToCanvas(_ point: CGPoint) -> CGPoint {
         return convert(point, to: contentView)
     }
 

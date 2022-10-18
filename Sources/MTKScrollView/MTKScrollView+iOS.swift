@@ -8,6 +8,7 @@
 
 import Foundation
 import MetalKit
+import UIKit
 
 /// A view that allows the scrolling and zooming of a MTKView, providing a ``viewMatrix`` for use in vertex shaders.
 open class MTKScrollView: MTKView {
@@ -73,6 +74,13 @@ open class MTKScrollView: MTKView {
             [Float(caTransform.m41), Float(caTransform.m42), Float(caTransform.m43), Float(caTransform.m44)]
         ])
     }
+    
+    /// The policy that controls the types of touches allowed when drawing on the canvas.
+    public var drawingPolicy: DrawingPolicy = UIPencilInteraction.prefersPencilOnlyDrawing ? .pencilOnly : .anyInput {
+        didSet {
+            scrollView.panGestureRecognizer.minimumNumberOfTouches = drawingPolicy == .pencilOnly ? 1 : 2
+        }
+    }
 
     private var scrollView: UIScrollView!
     private var contentView: UIView!
@@ -114,6 +122,7 @@ open class MTKScrollView: MTKView {
         scrollView.addSubview(contentView)
         contentView.translatesAutoresizingMaskIntoConstraints = false
 
+        scrollView.panGestureRecognizer.minimumNumberOfTouches = drawingPolicy == .pencilOnly ? 1 : 2
         isPaused = true
         enableSetNeedsDisplay = true
     }
@@ -196,6 +205,13 @@ extension MTKScrollView: UIScrollViewDelegate {
 
     public func scrollViewDidScroll(_ scrollView: UIScrollView) {
         displayAndCheckForAnimations()
+    }
+}
+
+extension MTKScrollView {
+    public enum DrawingPolicy {
+        case anyInput
+        case pencilOnly
     }
 }
 #endif

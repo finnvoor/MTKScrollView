@@ -107,6 +107,7 @@ open class MTKScrollView: MTKView {
 
     private func commonInit() {
         scrollView = EventForwardingScrollView()
+        scrollView.delaysContentTouches = false
         scrollView.delegate = self
         scrollView.contentInsetAdjustmentBehavior = .never
         addSubview(scrollView)

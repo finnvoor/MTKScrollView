@@ -82,7 +82,7 @@ open class MTKScrollView: MTKView {
         }
     }
 
-    private var scrollView: UIScrollView!
+    private var scrollView: EventForwardingScrollView!
     private var contentView: UIView!
 
     private var isAnimating = false
@@ -106,7 +106,7 @@ open class MTKScrollView: MTKView {
     }
 
     private func commonInit() {
-        scrollView = UIScrollView()
+        scrollView = EventForwardingScrollView()
         scrollView.delegate = self
         scrollView.contentInsetAdjustmentBehavior = .never
         addSubview(scrollView)

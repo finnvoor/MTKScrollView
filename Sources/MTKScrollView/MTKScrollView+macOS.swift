@@ -63,7 +63,7 @@ open class MTKScrollView: MTKView {
     
     private var boundsDidChangeCancellable: AnyCancellable?
     
-    override init(frame frameRect: CGRect, device: MTLDevice?) {
+    public override init(frame frameRect: CGRect, device: MTLDevice?) {
         super.init(frame: frameRect, device: device)
         commonInit()
     }

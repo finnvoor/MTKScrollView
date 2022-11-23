@@ -48,6 +48,7 @@ open class MTKScrollView: MTKView {
     public var magnification: CGFloat { return scrollView.magnification }
     public var minMagnification: CGFloat { return scrollView.minMagnification }
     public var maxMagnification: CGFloat { return scrollView.maxMagnification }
+    public var magnificationFactor: CGFloat = 1.5
     public var fittingMagnification: CGFloat {
         return min(
             bounds.width / (documentView.bounds.size.width),
@@ -124,6 +125,14 @@ open class MTKScrollView: MTKView {
     
     public func zoomToFit(animated: Bool = false) {
         (animated ? scrollView.animator() : scrollView).magnification = fittingMagnification
+    }
+    
+    public func zoomIn(animated: Bool = false) {
+        (animated ? scrollView.animator() : scrollView).magnification *= magnificationFactor
+    }
+    
+    public func zoomOut(animated: Bool = false) {
+        (animated ? scrollView.animator() : scrollView).magnification /= magnificationFactor
     }
     
     /// Converts a point from the ``MTKScrollView``'s coordinate system to that of the canvas..

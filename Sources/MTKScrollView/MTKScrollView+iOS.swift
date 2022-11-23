@@ -81,6 +81,8 @@ open class MTKScrollView: MTKView {
             scrollView.panGestureRecognizer.minimumNumberOfTouches = drawingPolicy == .pencilOnly ? 1 : 2
         }
     }
+    
+    public var magnificationFactor: CGFloat = 1.5
 
     private var scrollView: EventForwardingScrollView!
     private var contentView: UIView!
@@ -181,6 +183,14 @@ extension MTKScrollView {
             bounds.width / contentSize.width,
             bounds.height / contentSize.height
         ), animated: animated)
+    }
+    
+    public func zoomIn(animated: Bool = false) {
+        scrollView.setZoomScale(scrollView.zoomScale * magnificationFactor, animated: animated)
+    }
+    
+    public func zoomOut(animated: Bool = false) {
+        scrollView.setZoomScale(scrollView.zoomScale / magnificationFactor, animated: animated)
     }
 
     private func updateZoomBounds() {
